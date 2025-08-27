@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trắc nghiệm Kéo Thả</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .draggable {
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s ease-in-out;
+        }
+        .draggable:active {
+            cursor: grabbing;
+        }
+        .dropzone {
+            transition: all 0.2s ease-in-out;
+            border: 2px dashed #d1d5db;
+        }
+        .dropzone.drag-over {
+            border-color: #4f46e5;
+            background-color: #eef2ff;
+        }
+        .correct {
+            background-color: #d1fae5 !important;
+        }
+        .incorrect {
+            background-color: #fee2e2 !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div id="app" class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-4xl">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Trắc nghiệm IELTS Speaking</h1>
+        <p class="text-center text-gray-600 mb-8">Hãy kéo các đáp án vào ô trống để hoàn thành câu hỏi.</p>
+
+        <div id="quiz-container" class="space-y-8">
+            <!-- Câu hỏi sẽ được chèn vào đây bởi JavaScript -->
+        </div>
+
+        <div class="mt-8 flex justify-center space-x-4">
+            <button id="check-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-full shadow-lg transition transform hover:scale-105">
+                Kiểm Tra
+            </button>
+            <button id="reset-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-full shadow-lg transition transform hover:scale-105">
+                Làm Lại
+            </button>
+        </div>
+
+        <div id="result-container" class="mt-8 text-center text-lg font-semibold"></div>
+    </div>
+
+    <script>
+        // Dữ liệu câu hỏi về IELTS Speaking
+        const quizData = [
+            { question_number: 1, question: 'Đối với tiêu chí "Fluency & Coherence" ở Band 7, điều gì là đúng về tốc độ nói?', option_a: 'A. Nói rất nhanh và không ngừng nghỉ.', option_b: 'B. Duy trì tốc độ nói ổn định, có thể có chút do dự để tìm từ.', option_c: 'C. Nói chậm và phát âm từng từ một.', option_d: 'D. Nói ngập ngừng và thường xuyên dừng lại.', correct_answer: 'B. Duy trì tốc độ nói ổn định, có thể có chút do dự để tìm từ.', feedback: 'Band 7 cho phép do dự nhỏ khi tìm từ hoặc ý, miễn là nó không làm gián đoạn mạch lạc.' },
+            { question_number: 2, question: 'Về "Lexical Resource" ở Band 7, người nói sử dụng từ vựng như thế nào?', option_a: 'A. Chỉ dùng từ vựng cơ bản và lặp lại nhiều.', option_b: 'B. Sử dụng đủ vốn từ để linh hoạt, có thể dùng một số từ ít phổ biến.', option_c: 'C. Luôn dùng từ vựng rất phức tạp và khó hiểu.', option_d: 'D. Dùng từ vựng đúng nhưng không đa dạng.', correct_answer: 'B. Sử dụng đủ vốn từ để linh hoạt, có thể dùng một số từ ít phổ biến.', feedback: 'Band 7 thể hiện sự linh hoạt và nỗ lực dùng từ vựng phong phú, không nhất thiết hoàn hảo.' },
+            { question_number: 3, question: 'Để đạt Band 7 về "Grammatical Range & Accuracy", người nói nên làm gì?', option_a: 'A. Chỉ dùng câu đơn giản để tránh lỗi.', option_b: 'B. Sử dụng kết hợp câu đơn và câu phức tạp với nhiều câu không mắc lỗi.', option_c: 'C. Mắc nhiều lỗi ngữ pháp nghiêm trọng.', option_d: 'D. Chỉ dùng thì Hiện tại đơn.', correct_answer: 'B. Sử dụng kết hợp câu đơn và câu phức tạp với nhiều câu không mắc lỗi.', feedback: 'Band 7 đòi hỏi sự đa dạng cấu trúc và độ chính xác cao, dù vẫn có thể có lỗi nhỏ.' },
+            { question_number: 4, question: '"Pronunciation" ở Band 7 được miêu tả như thế nào?', option_a: 'A. Rất khó hiểu do phát âm sai nhiều từ.', option_b: 'B. Nói chung dễ hiểu, có thể có lỗi nhưng không gây nhầm lẫn.', option_c: 'C. Nói với giọng bản xứ hoàn hảo.', option_d: 'D. Phát âm từng từ một, rất chậm.', correct_answer: 'B. Nói chung dễ hiểu, có thể có lỗi nhưng không gây nhầm lẫn.', feedback: 'Band 7 yêu cầu phát âm rõ ràng, có thể có lỗi nhỏ nhưng không ảnh hưởng đến khả năng hiểu chung.' },
+            { question_number: 5, question: 'Khi người nói "paraphrases effectively", điều đó có nghĩa là gì?', option_a: 'A. Họ lặp lại câu hỏi y nguyên.', option_b: 'B. Họ diễn đạt lại ý tưởng bằng từ ngữ khác một cách thành công.', option_c: 'C. Họ chỉ dùng từ giống hệt trong câu hỏi.', option_d: 'D. Họ không bao giờ diễn đạt lại.', correct_answer: 'B. Họ diễn đạt lại ý tưởng bằng từ ngữ khác một cách thành công.', feedback: '"Paraphrasing" (diễn giải lại) là kỹ năng quan trọng để thể hiện vốn từ vựng đa dạng.' },
+            { question_number: 6, question: '"Less common lexical items with some awareness of style" ở Band 7 có nghĩa là:', option_a: 'A. Người nói dùng từ hiếm nhưng không hiểu nghĩa.', option_b: 'B. Người nói cố gắng dùng các từ ít phổ biến và phù hợp với ngữ cảnh.', option_c: 'C. Người nói chỉ dùng từ thông tục.', option_d: 'D. Người nói luôn dùng từ học thuật.', correct_answer: 'B. Người nói cố gắng dùng các từ ít phổ biến và phù hợp với ngữ cảnh.', feedback: 'Band 7 thể hiện sự nỗ lực mở rộng từ vựng và biết dùng từ ở cấp độ cao hơn.' },
+            { question_number: 7, question: 'Để ý tưởng có "clear progression", người nói nên:', option_a: 'A. Trình bày các ý tưởng một cách ngẫu nhiên.', option_b: 'B. Sử dụng các từ nối (linking words) một cách hợp lý.', option_c: 'C. Nói về quá nhiều ý tưởng trong một câu.', option_d: 'D. Tránh dùng từ nối.', correct_answer: 'B. Sử dụng các từ nối (linking words) một cách hợp lý.', feedback: 'Các từ nối giúp bài nói mạch lạc và dễ theo dõi.' },
+            { question_number: 8, question: 'Khi được hỏi về một địa điểm, câu trả lời Band 7 có thể bao gồm:', option_a: 'A. Chỉ tên địa điểm.', option_b: 'B. Tên địa điểm và một vài chi tiết miêu tả hoặc lý do thích nó.', option_c: 'C. Một bài thuyết trình dài về lịch sử địa điểm đó.', option_d: 'D. So sánh địa điểm đó với nhiều nơi khác.', correct_answer: 'B. Tên địa điểm và một vài chi tiết miêu tả hoặc lý do thích nó.', feedback: 'Mở rộng câu trả lời bằng cách thêm chi tiết là chiến lược quan trọng để đạt điểm cao trong Part 1.' },
+            { question_number: 9, question: 'Trong Speaking Part 1, để trả lời câu hỏi "How often...?", bạn nên dùng thì nào?', option_a: 'A. Present Continuous (Hiện tại tiếp diễn)', option_b: 'B. Past Simple (Quá khứ đơn)', option_c: 'C. Present Simple (Hiện tại đơn)', option_d: 'D. Future Simple (Tương lai đơn)', correct_answer: 'C. Present Simple (Hiện tại đơn)', feedback: '"How often" hỏi về tần suất, nên dùng thì Hiện tại đơn để diễn tả thói quen.' },
+            { question_number: 10, question: 'Nếu bạn muốn nói về một kế hoạch trong tương lai gần, bạn có thể dùng cấu trúc nào?', option_a: 'A. I used to...', option_b: 'B. I would like to...', option_c: 'C. I am going to...', option_d: 'D. I am...', correct_answer: 'C. I am going to...', feedback: '"Be going to" là cấu trúc phổ biến và chính xác để nói về các kế hoạch đã định.' },
+            { question_number: 11, question: 'Khi mô tả một bức tranh trong Part 2, bạn nên dùng thì nào?', option_a: 'A. Hiện tại tiếp diễn (Present Continuous)', option_b: 'B. Quá khứ đơn (Past Simple)', option_c: 'C. Hiện tại hoàn thành (Present Perfect)', option_d: 'D. Tương lai đơn (Future Simple)', correct_answer: 'A. Hiện tại tiếp diễn (Present Continuous)', feedback: 'Thì Hiện tại tiếp diễn được dùng để miêu tả những gì đang xảy ra trong bức tranh.' },
+            { question_number: 12, question: 'Để so sánh hai bức tranh trong Part 2, từ nối nào phù hợp nhất?', option_a: 'A. Similarly...', option_b: 'B. In contrast...', option_c: 'C. Therefore...', option_d: 'D. So...', correct_answer: 'B. In contrast...', feedback: '"In contrast" (ngược lại) là từ nối mạnh mẽ để chỉ ra sự khác biệt.' },
+            { question_number: 13, question: 'Trong Part 3, để mở đầu một ý kiến cá nhân, cụm từ nào sau đây là tốt nhất?', option_a: 'A. "In my opinion..."', option_b: 'B. "It is a fact that..."', option_c: 'C. "Scientists believe that..."', option_d: 'D. "I agree with..."', correct_answer: 'A. "In my opinion..."', feedback: '"In my opinion" là cách trực tiếp và tự nhiên nhất để bày tỏ quan điểm cá nhân.' },
+            { question_number: 14, question: 'Để làm cho câu trả lời của bạn trôi chảy hơn và có nhiều chi tiết hơn, bạn nên:', option_a: 'A. Sử dụng nhiều từ lóng.', option_b: 'B. Kết hợp các câu đơn giản thành câu phức hợp.', option_c: 'C. Chỉ nói những câu rất ngắn.', option_d: 'D. Tập trung vào một ý tưởng duy nhất.', correct_answer: 'B. Kết hợp các câu đơn giản thành câu phức hợp.', feedback: 'Sự đa dạng về cấu trúc ngữ pháp là yếu tố quan trọng để đạt điểm cao trong Band 7+.' },
+            { question_number: 15, question: 'Một người nói Band 7 có thể mắc lỗi phát âm nào?', option_a: 'A. Phát âm sai các âm cơ bản, gây khó hiểu.', option_b: 'B. Phát âm đúng nhưng ngữ điệu đơn điệu.', option_c: 'C. Phát âm sai một vài từ riêng lẻ nhưng không gây nhầm lẫn chung.', option_d: 'D. Nói quá nhanh không rõ ràng.', correct_answer: 'C. Phát âm sai một vài từ riêng lẻ nhưng không gây nhầm lẫn chung.', feedback: 'Band 7 cho phép các lỗi nhỏ không làm cản trở việc hiểu bài.' },
+            { question_number: 16, question: 'Khi không biết từ nào để miêu tả, bạn nên:', option_a: 'A. Ngừng nói.', option_b: 'B. Cố gắng miêu tả bằng các từ khác bạn biết.', option_c: 'C. Đặt câu hỏi cho giám khảo.', option_d: 'D. Lặp lại câu hỏi.', correct_answer: 'B. Cố gắng miêu tả bằng các từ khác bạn biết.', feedback: '"Circumlocution" (nói vòng) là một kỹ năng quan trọng để xử lý từ vựng.' },
+            { question_number: 17, question: 'Để trả lời một câu hỏi về một chủ đề phức tạp trong Part 3, bạn nên làm gì?', option_a: 'A. Giữ câu trả lời rất ngắn gọn.', option_b: 'B. Đưa ra một câu trả lời ngắn và không phát triển ý.', option_c: 'C. Đưa ra một quan điểm có sắc thái và phát triển nó bằng lý do và ví dụ.', option_d: 'D. Chuyển chủ đề.', correct_answer: 'C. Đưa ra một quan điểm có sắc thái và phát triển nó bằng lý do và ví dụ.', feedback: 'Part 3 yêu cầu thảo luận các ý tưởng trừu tượng, nên cần phát triển ý một cách đầy đủ.' },
+            { question_number: 18, question: 'Khi trả lời câu hỏi về sở thích, bạn nên sử dụng cấu trúc nào để tránh lặp từ "like"?', option_a: 'A. I am keen on…', option_b: 'B. I am a big fan of…', option_c: 'C. I enjoy…', option_d: 'D. All of the above', correct_answer: 'D. All of the above', feedback: 'Các cụm từ này đều là cách tốt để diễn đạt sở thích mà không lặp từ "like".' },
+            { question_number: 19, question: 'Để bài nói của bạn có "range of sentence structures", bạn nên sử dụng:', option_a: 'A. Chỉ câu đơn.', option_b: 'B. Chỉ câu phức.', option_c: 'C. Một sự kết hợp của câu đơn, câu phức và câu ghép.', option_d: 'D. Chỉ câu ghép.', correct_answer: 'C. Một sự kết hợp của câu đơn, câu phức và câu ghép.', feedback: 'Band 7+ đòi hỏi sự đa dạng cấu trúc câu.' },
+            { question_number: 20, question: 'Khi bạn nói "I mean...", bạn đang cố gắng làm gì?', option_a: 'A. Cố gắng kết thúc câu trả lời.', option_b: 'B. Bày tỏ sự bối rối.', option_c: 'C. Giải thích lại hoặc làm rõ một ý tưởng.', option_d: 'D. Đặt một câu hỏi.', correct_answer: 'C. Giải thích lại hoặc làm rõ một ý tưởng.', feedback: '"I mean" là một từ nối tự nhiên dùng để làm rõ ý.' },
+            { question_number: 21, question: 'Trong Part 1, để trả lời câu hỏi về kế hoạch cuối tuần, cụm từ nào sau đây là phù hợp nhất?', option_a: 'A. I usually…', option_b: 'B. I will go...', option_c: 'C. I am going to…', option_d: 'D. Cả B và C đều đúng', correct_answer: 'D. Cả B và C đều đúng', feedback: '"Will" cho kế hoạch ít chắc chắn, "be going to" cho kế hoạch chắc chắn hơn. Cả hai đều phù hợp cho Part 1.' },
+            { question_number: 22, question: 'Khi mô tả một quá trình trong Part 2, thì nào được sử dụng nhiều nhất?', option_a: 'A. Hiện tại tiếp diễn', option_b: 'B. Quá khứ đơn', option_c: 'C. Hiện tại đơn', option_d: 'D. Tương lai đơn', correct_answer: 'C. Hiện tại đơn', feedback: 'Khi miêu tả một quy trình hoặc biểu đồ, thì Hiện tại đơn là thì chính được sử dụng để diễn tả sự thật.' },
+            { question_number: 23, question: 'Khi trả lời câu hỏi về lý do (\'Why...\'), bạn nên sử dụng các từ nối nào?', option_a: 'A. and, but', option_b: 'B. so, therefore', option_c: 'C. because, since, as', option_d: 'D. with, at', correct_answer: 'C. because, since, as', feedback: 'Các từ này dùng để giới thiệu mệnh đề chỉ nguyên nhân.' },
+            { question_number: 24, question: 'Một người nói Band 7 có thể mắc lỗi ngữ pháp nào?', option_a: 'A. Lỗi hệ thống trong các thì cơ bản.', option_b: 'B. Lỗi nhỏ trong các cấu trúc phức tạp.', option_c: 'C. Lỗi lớn làm thay đổi ý nghĩa câu.', option_d: 'D. Rất nhiều lỗi.', correct_answer: 'B. Lỗi nhỏ trong các cấu trúc phức tạp.', feedback: 'Band 7 cho phép lỗi nhỏ trong cấu trúc phức tạp, không phải lỗi hệ thống.' },
+            { question_number: 25, question: '"Intonation" (ngữ điệu) có tầm quan trọng như thế nào đối với Band 7?', option_a: 'A. Không quan trọng.', option_b: 'B. Cần phải được sử dụng hiệu quả để làm câu nói tự nhiên và ý nghĩa rõ ràng.', option_c: 'C. Chỉ quan trọng ở cuối câu.', option_d: 'D. Chỉ quan trọng trong Part 3.', correct_answer: 'B. Cần phải được sử dụng hiệu quả để làm câu nói tự nhiên và ý nghĩa rõ ràng.', feedback: 'Ngữ điệu giúp bài nói tự nhiên hơn và thể hiện cảm xúc, ý định.' },
+            { question_number: 26, question: 'Để tránh lặp lại "my family", bạn có thể dùng đại từ nào?', option_a: 'A. he', option_b: 'B. they', option_c: 'C. it', option_d: 'D. we', correct_answer: 'B. they', feedback: '"They" là đại từ số nhiều có thể thay thế cho "my family".' },
+            { question_number: 27, question: 'Khi nói về một điều không có thật ở hiện tại, bạn có thể dùng cấu trúc nào?', option_a: 'A. I wish I can...', option_b: 'B. I wish I could...', option_c: 'C. I wish I will...', option_d: 'D. I wish I am...', correct_answer: 'B. I wish I could...', feedback: '"I wish + S + could + V" là cấu trúc đúng để ước một điều không có thật.' },
+            { question_number: 28, question: 'Để nói về một thói quen gây khó chịu, bạn nên dùng cấu trúc nào?', option_a: 'A. He always forgets my name.', option_b: 'B. He is always forgetting my name.', option_c: 'C. He never forgets my name.', option_d: 'D. He usually forgets my name.', correct_answer: 'B. He is always forgetting my name.', feedback: '"Always" với Hiện tại tiếp diễn diễn tả sự phàn nàn, khó chịu.' },
+            { question_number: 29, question: 'Khi trả lời một câu hỏi về một thành phố, bạn nên miêu tả nó bằng cách nào?', option_a: 'A. The city is big.', option_b: 'B. The city is a bustling metropolis.', option_c: 'C. The city is big and beautiful.', option_d: 'D. The city is big and beautiful.', correct_answer: 'B. The city is a bustling metropolis.', feedback: '"Bustling metropolis" là một cụm từ miêu tả cao hơn so với "big city".' },
+            { question_number: 30, question: 'Trong Speaking Part 1, bạn nên tránh làm gì?', option_a: 'A. Trả lời đầy đủ.', option_b: 'B. Nói tự tin.', option_c: 'C. Sử dụng các câu trả lời đã học thuộc lòng (memorized answers).', option_d: 'D. Sử dụng từ vựng đa dạng.', correct_answer: 'C. Sử dụng các câu trả lời đã học thuộc lòng (memorized answers).', feedback: 'Giám khảo có thể dễ dàng nhận ra câu trả lời đã học thuộc và đánh giá thấp.' }
+        ];
+
+        let draggedItem = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderQuiz();
+            setupEventListeners();
+        });
+
+        function renderQuiz() {
+            const quizContainer = document.getElementById('quiz-container');
+            quizContainer.innerHTML = '';
+            quizData.forEach(q => {
+                const questionElement = document.createElement('div');
+                questionElement.classList.add('p-6', 'bg-gray-50', 'rounded-xl', 'shadow-md', 'border', 'border-gray-200');
+
+                const questionText = document.createElement('p');
+                questionText.classList.add('text-lg', 'font-medium', 'text-gray-700', 'mb-4');
+                questionText.textContent = q.question_number + '. ' + q.question;
+                questionElement.appendChild(questionText);
+
+                const optionsContainer = document.createElement('div');
+                optionsContainer.classList.add('options-container', 'flex', 'flex-col', 'sm:flex-row', 'sm:flex-wrap', 'gap-4', 'justify-between');
+
+                const options = [q.option_a, q.option_b, q.option_c, q.option_d];
+                // Xáo trộn các đáp án để không bị cố định
+                options.sort(() => Math.random() - 0.5);
+
+                options.forEach(option => {
+                    const optionElement = document.createElement('div');
+                    optionElement.classList.add('draggable', 'p-3', 'bg-white', 'rounded-lg', 'shadow-sm', 'border', 'border-gray-200', 'flex-1', 'text-center', 'font-medium', 'text-gray-800');
+                    optionElement.textContent = option;
+                    optionElement.setAttribute('draggable', true);
+                    optionElement.dataset.value = option; // Lưu giá trị của đáp án
+                    optionsContainer.appendChild(optionElement);
+                });
+
+                const dropzone = document.createElement('div');
+                dropzone.classList.add('dropzone', 'p-6', 'bg-gray-100', 'rounded-lg', 'text-center', 'min-h-16', 'flex', 'items-center', 'justify-center', 'text-gray-500', 'mt-4');
+                dropzone.textContent = 'Kéo đáp án vào đây...';
+                dropzone.dataset.correctAnswer = q.correct_answer;
+                
+                questionElement.appendChild(optionsContainer);
+                questionElement.appendChild(dropzone);
+                quizContainer.appendChild(questionElement);
+            });
+        }
+
+        function setupEventListeners() {
+            const quizContainer = document.getElementById('quiz-container');
+
+            quizContainer.addEventListener('dragstart', (e) => {
+                if (e.target.classList.contains('draggable')) {
+                    draggedItem = e.target;
+                    e.target.classList.add('opacity-50');
+                }
+            });
+
+            quizContainer.addEventListener('dragend', (e) => {
+                if (e.target.classList.contains('draggable')) {
+                    e.target.classList.remove('opacity-50');
+                }
+            });
+
+            quizContainer.addEventListener('dragover', (e) => {
+                const dropzone = e.target.closest('.dropzone');
+                if (dropzone) {
+                    e.preventDefault();
+                    dropzone.classList.add('drag-over');
+                }
+            });
+
+            quizContainer.addEventListener('dragleave', (e) => {
+                const dropzone = e.target.closest('.dropzone');
+                if (dropzone) {
+                    dropzone.classList.remove('drag-over');
+                }
+            });
+
+            quizContainer.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const dropzone = e.target.closest('.dropzone');
+                if (dropzone && draggedItem) {
+                    // Find the existing draggable item in the dropzone
+                    const existingItem = dropzone.querySelector('.draggable');
+                    
+                    if (existingItem) {
+                        // Move the old item back to its original container
+                        const originalContainer = existingItem.closest('.p-6').querySelector('.options-container');
+                        if (originalContainer) {
+                             originalContainer.appendChild(existingItem);
+                             existingItem.classList.remove('correct', 'incorrect');
+                        }
+                    }
+
+                    // Append the new item to the dropzone
+                    dropzone.innerHTML = ''; // Clear placeholder text
+                    dropzone.classList.remove('drag-over');
+                    dropzone.appendChild(draggedItem);
+                }
+            });
+
+            document.getElementById('check-btn').addEventListener('click', () => {
+                checkAnswers();
+            });
+
+            document.getElementById('reset-btn').addEventListener('click', () => {
+                resetQuiz();
+            });
+        }
+
+        function checkAnswers() {
+            const dropzones = document.querySelectorAll('.dropzone');
+            let correctCount = 0;
+
+            dropzones.forEach((dropzone, index) => {
+                // Remove old feedback before checking
+                const oldFeedback = dropzone.querySelector('.feedback');
+                if (oldFeedback) oldFeedback.remove();
+                
+                const droppedItem = dropzone.querySelector('.draggable');
+                const correctAnswer = dropzone.dataset.correctAnswer;
+                
+                const feedbackDiv = document.createElement('p');
+                feedbackDiv.classList.add('text-sm', 'mt-2', 'font-normal');
+
+                if (droppedItem && droppedItem.dataset.value === correctAnswer) {
+                    dropzone.classList.add('correct');
+                    dropzone.classList.remove('incorrect');
+                    droppedItem.classList.add('correct');
+                    droppedItem.classList.remove('incorrect');
+                    feedbackDiv.classList.add('text-green-700', 'feedback');
+                    feedbackDiv.textContent = 'Đúng rồi!';
+                    correctCount++;
+                } else {
+                    dropzone.classList.add('incorrect');
+                    dropzone.classList.remove('correct');
+                    if (droppedItem) {
+                        droppedItem.classList.add('incorrect');
+                        droppedItem.classList.remove('correct');
+                    }
+                    feedbackDiv.classList.add('text-red-700', 'feedback');
+                    feedbackDiv.textContent = `Sai. Đáp án đúng là: ${correctAnswer}.`;
+                }
+                
+                // Add the explanation feedback
+                const feedbackText = quizData[index].feedback;
+                const explainFeedback = document.createElement('p');
+                explainFeedback.classList.add('text-sm', 'mt-1', 'text-gray-500', 'feedback');
+                explainFeedback.textContent = feedbackText;
+
+                dropzone.appendChild(feedbackDiv);
+                dropzone.appendChild(explainFeedback);
+            });
+
+            const resultContainer = document.getElementById('result-container');
+            resultContainer.textContent = `Bạn đã trả lời đúng ${correctCount} / ${quizData.length} câu.`;
+            resultContainer.classList.remove('text-green-600', 'text-red-600');
+            if (correctCount === quizData.length) {
+                resultContainer.classList.add('text-green-600');
+            } else {
+                resultContainer.classList.add('text-red-600');
+            }
+        }
+
+        function resetQuiz() {
+            const quizContainer = document.getElementById('quiz-container');
+            quizContainer.innerHTML = '';
+            document.getElementById('result-container').textContent = '';
+            renderQuiz();
+        }
+    </script>
+</body>
+</html>
